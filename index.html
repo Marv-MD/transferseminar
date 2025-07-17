@@ -9,40 +9,81 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            /* Prevents pull-to-refresh on iOS */
             overscroll-behavior-y: contain;
         }
         .point-label {
             transition: all 0.2s ease-in-out;
             cursor: pointer;
-            border: 1px solid #d1d5db; /* gray-300 */
+            border: 1px solid #d1d5db;
         }
-        .point-label:hover { border-color: #3b82f6; /* blue-500 */ }
+        .point-label:hover { border-color: #3b82f6; }
         input[type="radio"]:checked + .point-label {
-            background-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6;
             color: white;
-            border-color: #3b82f6; /* blue-500 */
+            border-color: #3b82f6;
         }
         input[type="radio"] { display: none; }
         .signature-canvas {
             border: 2px dashed #d1d5db;
             border-radius: 0.5rem;
             cursor: crosshair;
-            touch-action: none; /* Prevents scrolling while drawing on canvas */
+            touch-action: none;
         }
+
+        /* --- PRINT STYLES --- */
         @media print {
-            body { font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { 
+                font-size: 10pt; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
             .no-print { display: none !important; }
-            .print-container { box-shadow: none; border: none; }
-            .criterion-row { page-break-inside: avoid; }
-            .point-label { border: 1px solid #d1d5db; }
+            .print-container { box-shadow: none !important; border: none !important; }
+            
+            .grading-header, .grading-area, .summary-section {
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+            }
+
+            .grading-area {
+                margin-top: 2rem !important;
+            }
+
+            .criterion-row { 
+                page-break-inside: avoid; 
+                display: grid;
+                grid-template-columns: 3fr 1fr 1fr; /* Strict table layout for print */
+                gap: 1rem;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            
+            .criterion-row .lg\:hidden {
+                display: none; /* Hide mobile helper texts */
+            }
+
+            .criterion-row .points-container {
+                justify-content: center;
+            }
+
+            .point-label { 
+                border: 1px solid #ccc;
+                width: 2rem; /* Fixed size for print */
+                height: 2rem;
+                font-size: 0.9rem;
+            }
             input[type="radio"]:checked + .point-label {
                 background-color: #3b82f6 !important;
                 color: white !important;
                 border-color: #3b82f6 !important;
             }
+
             .summary-section {
                 page-break-before: always;
+                grid-template-columns: 1fr; /* Stack summaries on print */
+            }
+            .summary-card {
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -51,7 +92,7 @@
 
     <div class="max-w-7xl mx-auto print-container">
         <!-- Header & Controls -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 grading-header">
             <div class="flex flex-wrap justify-between items-start">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Praktische Prüfung Transferseminar I: Notfallmanagement, SS 2025</h1>
@@ -89,10 +130,10 @@
         <!-- Grading Area -->
         <div id="grading-area" class="hidden">
             <!-- Criteria Table -->
-            <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="bg-white p-6 rounded-lg shadow-md grading-area">
                 <!-- Responsive Header for the table -->
-                <div class="hidden lg:grid lg:grid-cols-5 lg:gap-4 items-center mb-4 border-b pb-2">
-                    <h3 class="col-span-3 text-lg font-semibold">Bewertungskriterium</h3>
+                <div class="hidden lg:grid lg:grid-cols-3 lg:gap-4 items-center mb-4 border-b pb-2">
+                    <h3 class="col-span-1 text-lg font-semibold">Bewertungskriterium</h3>
                     <h3 id="student1-header" class="text-center text-lg font-semibold">Studierende/r 1</h3>
                     <h3 id="student2-header" class="text-center text-lg font-semibold">Studierende/r 2</h3>
                 </div>
@@ -104,7 +145,7 @@
             <!-- Summary & Signature Section -->
             <div class="summary-section mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Student 1 Summary -->
-                <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                <div class="bg-white p-6 rounded-lg shadow-md space-y-4 summary-card">
                      <h3 class="text-lg font-semibold border-b pb-2">Zusammenfassung: <span id="student1-name-summary"></span></h3>
                      <div class="flex justify-between items-center">
                         <span class="font-medium">Gesamtpunktzahl:</span>
@@ -121,7 +162,7 @@
                     </div>
                 </div>
                 <!-- Student 2 Summary -->
-                <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                <div class="bg-white p-6 rounded-lg shadow-md space-y-4 summary-card">
                      <h3 class="text-lg font-semibold border-b pb-2">Zusammenfassung: <span id="student2-name-summary"></span></h3>
                      <div class="flex justify-between items-center">
                         <span class="font-medium">Gesamtpunktzahl:</span>
@@ -212,21 +253,16 @@
                     row.className = 'pt-4 pb-1';
                     row.innerHTML = `<h4 class="col-span-full text-md font-semibold text-gray-800">${data.text}</h4>`;
                 } else if (data.type === 'item') {
-                    // This is the responsive row for each criterion
-                    row.className = 'criterion-row grid grid-cols-1 lg:grid-cols-5 gap-x-4 gap-y-2 items-center py-3 px-2 rounded-md hover:bg-gray-50 border-b';
+                    row.className = 'criterion-row grid grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-2 items-center py-3 px-2 rounded-md hover:bg-gray-50 border-b';
                     row.innerHTML = `
-                        <label class="lg:col-span-3 text-sm font-medium text-gray-800">${data.text}</label>
-                        
-                        <!-- Student 1 Points - Responsive -->
-                        <div class="flex justify-between items-center lg:col-span-1 lg:justify-center">
+                        <label class="lg:col-span-1 text-sm font-medium text-gray-800">${data.text}</label>
+                        <div class="flex justify-between items-center lg:col-span-1 lg:justify-center points-container">
                             <span class="lg:hidden font-semibold text-sm text-gray-600" id="s1-name-row-${itemIndex}">Studierende/r 1</span>
                             <div class="flex items-center justify-center space-x-2">
                                 ${createPointSelectors(1, itemIndex)}
                             </div>
                         </div>
-
-                        <!-- Student 2 Points - Responsive -->
-                        <div class="flex justify-between items-center lg:col-span-1 lg:justify-center">
+                        <div class="flex justify-between items-center lg:col-span-1 lg:justify-center points-container">
                              <span class="lg:hidden font-semibold text-sm text-gray-600" id="s2-name-row-${itemIndex}">Studierende/r 2</span>
                              <div class="flex items-center justify-center space-x-2">
                                 ${createPointSelectors(2, itemIndex)}
@@ -278,15 +314,11 @@
                 resetAllBtn.disabled = true;
             }
             
-            // Update main headers (for large screens)
             document.getElementById('student1-header').textContent = s1_name;
             document.getElementById('student2-header').textContent = s2_name;
-            
-            // Update summary names
             document.getElementById('student1-name-summary').textContent = s1_selected ? studentSelect1.value : '';
             document.getElementById('student2-name-summary').textContent = s2_selected ? studentSelect2.value : '';
 
-            // Update names in each row (for small screens)
             const numItems = criteriaData.filter(d => d.type === 'item').length;
             for(let i = 0; i < numItems; i++) {
                 const s1_row_name = document.getElementById(`s1-name-row-${i}`);
@@ -335,7 +367,6 @@
             const clearBtn = document.getElementById(`clear-signature-${id}`);
             const ctx = canvas.getContext('2d');
             
-            // Set canvas size for high resolution displays
             const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width * dpr;
@@ -357,15 +388,13 @@
             const draw = (e) => { if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); };
             const stop = () => { if(drawing) { ctx.beginPath(); drawing = false; } };
 
-            // Mouse events
             canvas.addEventListener('mousedown', start);
             canvas.addEventListener('mousemove', draw);
             canvas.addEventListener('mouseup', stop);
             canvas.addEventListener('mouseleave', stop);
 
-            // Touch events
-            canvas.addEventListener('touchstart', start);
-            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
             canvas.addEventListener('touchend', stop);
             
             clearBtn.addEventListener('click', () => ctx.clearRect(0, 0, canvas.width, canvas.height));
